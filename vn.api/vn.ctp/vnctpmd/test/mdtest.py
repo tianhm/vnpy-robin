@@ -3,8 +3,8 @@
 import sys
 from time import sleep
 
-from PyQt4 import QtGui
-
+#from PyQt4 import QtGui
+from threading import Thread
 from vnctpmd import *
 
 
@@ -114,12 +114,12 @@ class TestMdApi(MdApi):
 
 
 #----------------------------------------------------------------------
-def main():
+def unitTest():
     """主测试函数，出现堵塞时可以考虑使用sleep"""
     reqid = 0
     
     # 创建Qt应用对象，用于事件循环
-    app = QtGui.QApplication(sys.argv)
+    #app = QtGui.QApplication(sys.argv)
 
     # 创建API对象
     api = TestMdApi()
@@ -128,7 +128,7 @@ def main():
     api.createFtdcMdApi('')
     
     # 注册前置机地址
-    api.registerFront("tcp://qqfz-md1.ctp.shcifco.com:32313")
+    api.registerFront("tcp://101.231.162.58:41213")
     
     # 初始化api，连接前置机
     api.init()
@@ -136,9 +136,9 @@ def main():
     
     # 登陆
     loginReq = {}                           # 创建一个空字典
-    loginReq['UserID'] = ''                 # 参数作为字典键值的方式传入
-    loginReq['Password'] = ''               # 键名和C++中的结构体成员名对应
-    loginReq['BrokerID'] = ''    
+    loginReq['UserID'] = '03301066'                 # 参数作为字典键值的方式传入
+    loginReq['Password'] = 'jiajia3927384'               # 键名和C++中的结构体成员名对应
+    loginReq['BrokerID'] = '6000'    
     reqid = reqid + 1                       # 请求数必须保持唯一性
     i = api.reqUserLogin(loginReq, 1)
     sleep(0.5)
@@ -157,21 +157,25 @@ def main():
     #sleep(0.5)
     
     ## 订阅合约，测试通过
-    #i = api.subscribeMarketData('IF1505')
+    i = api.subscribeMarketData('IF1706')
     
     ## 退订合约，测试通过
-    #i = api.unSubscribeMarketData('IF1505')
+    #i = api.unSubscribeMarketData('IF1706')
     
     # 订阅询价，测试通过
-    i = api.subscribeForQuoteRsp('IO1504-C-3900')
+    #i = api.subscribeForQuoteRsp('IO1706-C-3900')
     
     # 退订询价，测试通过
-    i = api.unSubscribeForQuoteRsp('IO1504-C-3900')
+    #i = api.unSubscribeForQuoteRsp('IO1606-C-3900')
     
     # 连续运行，用于输出行情
-    app.exec_()
-    
+    #app.exec_()
+    print 'end'
     
     
 if __name__ == '__main__':
-    main()
+    thread = Thread(target=unitTest,args=())
+    thread.start()
+    print '__main__ end'
+   
+     
