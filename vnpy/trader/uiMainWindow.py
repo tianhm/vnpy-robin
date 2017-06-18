@@ -2,13 +2,13 @@
 
 # from uiFullMonitorWidget import MonitorWidget
 # from uiKChartWidget import CandleForm
-
+print 'load uiMainWindows.py'
 import psutil
 
 from vnpy.trader.app.ctaStrategy.uiCtaWidget import CtaEngineManager
 from vnpy.trader.app.dataRecorder.uiDrWidget import DrEngineManager
 from vnpy.trader.app.riskManager.uiRmWidget import RmEngineManager
-from vnpy.trader.uiBasicWidget import *
+from uiBasicWidget import *
 
 ########################################################################
 class MainWindow(QtGui.QMainWindow):
@@ -161,8 +161,7 @@ class MainWindow(QtGui.QMainWindow):
         sysMenu.addAction(connectCtpJRAction)
         sysMenu.addAction(connectCtpJR2Action)
 
-        if 'CTP' in self.mainEngine.gatewayDict:
-            sysMenu.addAction(connectCtpAction)
+        sysMenu.addAction(connectCtpAction)
         #if 'LTS' in self.mainEngine.gatewayDict:
         #    sysMenu.addAction(connectLtsAction)
         #if 'FEMAS' in self.mainEngine.gatewayDict:
@@ -430,7 +429,7 @@ class MainWindow(QtGui.QMainWindow):
     def test(self):
         """测试按钮用的函数"""
         # 有需要使用手动触发的测试函数可以写在这里
-        self.mainEngine.saveData()
+        self.mainEngine.qryStatus()
         pass
 
     #----------------------------------------------------------------------

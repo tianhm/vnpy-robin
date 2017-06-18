@@ -10,7 +10,9 @@
 
 建议将所有的常量定义放在该文件中，便于检查是否存在重复的现象。
 '''
+print 'load vtEvent.py'
 
+# 导入基础模块vnpy.event.EventEngine等
 from vnpy.event import *
 
 # 系统相关
@@ -30,6 +32,9 @@ EVENT_ERROR = 'eError.'                 # 错误回报事件
 EVENT_ACCOUNT_LOSS = 'eAccountLoss'     # 账户亏损事件
 EVENT_FULL_MONITOR = 'eFullMonitor'     # 全周期监控
 EVENT_ON_BAR = 'eOnBar'                 # OnBar事件
+EVENT_WARNING = 'eWarning'              # 全局告警信息
+EVENT_CRITICAL = 'eCritical'            # 全局严重信息
+EVENT_NOTIFICATION = 'eNotification'    # 全局通知
 
 # CTA模块相关
 EVENT_CTA_LOG = 'eCtaLog'               # CTA相关的日志事件

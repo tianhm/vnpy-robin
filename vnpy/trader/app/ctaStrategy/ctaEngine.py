@@ -20,6 +20,7 @@
 
 '''
 
+print 'load ctaEngine.py'
 import json
 import os
 import traceback
@@ -28,14 +29,14 @@ from datetime import datetime, timedelta
 import logging
 import re
 
-
-from ctaBase import *
-from strategy import STRATEGY_CLASS
 from vnpy.trader.vtEvent import *
 from vnpy.trader.vtConstant import *
 from vnpy.trader.vtGateway import VtSubscribeReq, VtOrderReq, VtCancelOrderReq, VtLogData
 from vnpy.trader.vtFunction import todayDate
+from vnpy.trader.app.ctaStrategy.ctaBase import *
 
+# 加载 strategy目录下所有的策略
+from vnpy.trader.app.ctaStrategy.strategy import STRATEGY_CLASS
 
 ########################################################################
 class CtaEngine(object):
@@ -579,7 +580,23 @@ class CtaEngine(object):
 
         # 写入本地log日志
         logging.info(content)
-    
+
+    def writeCtaError(self,content):
+        """快速发出CTA模块错误日志事件"""
+        self.mainEngine.writeError(content)
+
+    def writeCtaWarning(self, content):
+        """快速发出CTA模块告警日志事件"""
+        self.mainEngine.writeWarning(content)
+
+    def writeCtaNotification(self, content):
+        """快速发出CTA模块通知事件"""
+        self.mainEngine.writeNotification(content)
+
+    def writeCtaCritical(self,content):
+        """快速发出CTA模块异常日志事件"""
+        self.mainEngine.writeCritical(content)
+
     # ----------------------------------------------------------------------
     def loadStrategy(self, setting):
         """载入策略"""
@@ -588,12 +605,14 @@ class CtaEngine(object):
             className = setting['className']
         except Exception as e:
             self.writeCtaLog(u'载入策略出错：%s' %e)
+            self.mainEngine.writeCritical(u'载入策略出错：%s' %e)
             return
         
         # 获取策略类
         strategyClass = STRATEGY_CLASS.get(className, None)
         if not strategyClass:
-            self.writeCtaLog(u'找不到策略类：%s' %className)
+            self.writeCtaLog(u'STRATEGY_CLASS找不到策略类：%s' %className)
+            self.mainEngine.writeCritical(u'STRATEGY_CLASS找不到策略类：%s' %className)
             return
         
         # 防止策略重名
@@ -603,10 +622,24 @@ class CtaEngine(object):
             # 1.创建策略对象
             strategy = strategyClass(self, setting)  
             self.strategyDict[name] = strategy
-            
+
             # 2.保存Tick映射关系（symbol <==> Strategy[] )
             # modifid by Incenselee 支持多个Symbol的订阅
-            symbols = strategy.vtSymbol.split(';')
+            symbols = []
+            # 套利合约
+            if strategy.vtSymbol.find(' ') != -1:
+                # 排除SP SPC SPD
+                s = strategy.vtSymbol.split(' ')
+                if len(s) > 1:
+                    arb_symbols = s[1]
+
+                    # 只提取leg1合约
+                    if arb_symbols.find('&') != -1:
+                        symbols = arb_symbols.split('&')
+                else:
+                    symbols.append(s[0])
+            else:
+                symbols = strategy.vtSymbol.split(';')
 
             # 判断是否有Leg1Symbol,Leg2Symbol 两个合约属性
             if hasattr(strategy, 'Leg1Symbol'):
@@ -729,7 +762,7 @@ class CtaEngine(object):
                     if so.strategy is strategy:
                         self.cancelStopOrder(stopOrderID)   
         else:
-            self.writeCtaLog(u'策略实例不存在：%s' %name)        
+            self.writeCtaLog(u'策略实例不存在：%s' %name)
     
     # ----------------------------------------------------------------------
     def saveSetting(self):
@@ -796,6 +829,8 @@ class CtaEngine(object):
     def putStrategyEvent(self, name):
         """触发策略状态变化事件（通常用于通知GUI更新）"""
         event = Event(EVENT_CTA_STRATEGY+name)
+        d = 'putevent'
+        event.dict_['data'] = d
         self.eventEngine.put(event)
 
     # ----------------------------------------------------------------------
@@ -815,6 +850,7 @@ class CtaEngine(object):
             content = '\n'.join([u'策略%s触发异常已停止' % strategy.name,
                                  traceback.format_exc()])
             self.writeCtaLog(content)
+            self.mainEngine.writeCritical(content)
 
     # ----------------------------------------------------------------------
     def savePosition(self):
@@ -891,15 +927,44 @@ class CtaEngine(object):
 
     def getShortSymbol(self, symbol):
         """取得合约的短号"""
+        # 套利合约
+        if symbol.find(' ') != -1:
+            # 排除SP SPC SPD
+            s = symbol.split(' ')
+            if len(s) < 2:
+                return symbol
+            symbol = s[1]
+
+            # 只提取leg1合约
+            if symbol.find('&') != -1:
+                s = symbol.split('&')
+                if len(s) < 2:
+                    return symbol
+                symbol = s[0]
+
         p = re.compile(r"([A-Z]+)[0-9]+", re.I)
         shortSymbol = p.match(symbol)
 
-        if shortSymbol is None :
+        if shortSymbol is None:
             self.writeCtaLog(u'{0}不能正则分解'.format(symbol))
             return symbol
 
         return shortSymbol.group(1)
 
+    def qryStatus(self):
+        """查询cta Engined的运行状态"""
+
+        # 查询最新tick和更新时间
+        tick_status = u''
+        for k, v in self.tickDict.items():
+            tick_status += u'[{0};{1}];'.format(k, v.time)
+
+        # 查询策略运行状态
+        strategy_status = u''
+        for k, v in self.strategyDict.items():
+            strategy_status += u'[{0}:I:{1};T:{2}]'.format(k, v.inited, v.trading)
+
+        return tick_status, strategy_status
 
 ########################################################################
 class PositionBuffer(object):

@@ -1,11 +1,11 @@
 # encoding: utf-8
 
+print 'load vtClient.py'
 import ctypes
 import platform
 import sys
 
 from vnpy.rpc import RpcClient
-
 from vnpy.trader.app.ctaStrategy.ctaEngine import CtaEngine
 from vnpy.trader.app.dataRecorder.drEngine import DrEngine
 from vnpy.trader.app.riskManager.rmEngine import RmEngine
@@ -15,8 +15,6 @@ from uiMainWindow import *
 path = os.path.abspath(os.path.dirname(__file__))    
 ICON_FILENAME = 'vnpy.ico'
 ICON_FILENAME = os.path.join(path, ICON_FILENAME)  
-
-
 
 ########################################################################
 class VtClient(RpcClient):
@@ -56,7 +54,12 @@ class ClientEngine(object):
     def connect(self, gatewayName):
         """连接特定名称的接口"""
         self.client.connect(gatewayName)
-        
+
+    # ----------------------------------------------------------------------
+    def disconnect(self, gatewayName):
+        """连接特定名称的接口"""
+        self.client.disconnect(gatewayName)
+
     #----------------------------------------------------------------------
     def subscribe(self, subscribeReq, gatewayName):
         """订阅特定接口的行情"""
@@ -144,6 +147,21 @@ class ClientEngine(object):
         """查询所有的接口名称"""
         return self.client.getAllGatewayNames()
 
+    def getAccountInfo(self):
+        """读取风控的账号与仓位数据
+        # Added by IncenseLee
+        仅支持一个账号。不支持多账号
+        以后支持跨市场套利才更新吧。
+        """
+        return self.rmEngine.getAccountInfo()
+
+    def clearData(self):
+        """清空数据引擎的数据"""
+        self.dataEngine.clearData()
+        self.ctaEngine.clearData()
+
+    def saveData(self):
+        self.ctaEngine.saveStrategyData()
 
 #----------------------------------------------------------------------
 def main():
@@ -162,12 +180,13 @@ def main():
 
     # 创建客户端
     reqAddress = 'tcp://localhost:2014'
-    subAddress = 'tcp://localhost:0602'
+    subAddress = 'tcp://localhost:2016'
     client = VtClient(reqAddress, subAddress, eventEngine)
 
+    # 这里是订阅所有的publish event，也可以指定。
     client.subscribeTopic('')
     client.start()
-    
+
     # 初始化Qt应用对象
     app = QtGui.QApplication(sys.argv)
     app.setWindowIcon(QtGui.QIcon(ICON_FILENAME))
@@ -190,7 +209,6 @@ def main():
     
     # 在主线程中启动Qt事件循环
     sys.exit(app.exec_())
-
 
 if __name__ == '__main__':
     main()    
